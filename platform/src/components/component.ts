@@ -154,6 +154,7 @@ export class Component extends ComponentResource {
               "aws:lambda/provisionedConcurrencyConfig:ProvisionedConcurrencyConfig",
               "aws:lb/listener:Listener",
               "aws:lb/listenerRule:ListenerRule",
+              "aws:opensearch/domainPolicy:DomainPolicy",
               "aws:rds/proxyDefaultTargetGroup:ProxyDefaultTargetGroup",
               "aws:rds/proxyTarget:ProxyTarget",
               "aws:route53/record:Record",
@@ -173,9 +174,9 @@ export class Component extends ComponentResource {
               "aws:sns/topicSubscription:TopicSubscription",
               "aws:sqs/queuePolicy:QueuePolicy",
               "aws:ssm/parameter:Parameter",
-              "cloudflare:index/record:Record",
-              "cloudflare:index/workerCronTrigger:WorkerCronTrigger",
-              "cloudflare:index/workerDomain:WorkerDomain",
+              "cloudflare:index/dnsRecord:DnsRecord",
+              "cloudflare:index/workersCronTrigger:WorkersCronTrigger",
+              "cloudflare:index/workersCustomDomain:WorkersCustomDomain",
               "docker-build:index:Image",
               "vercel:index/dnsRecord:DnsRecord",
             ].includes(args.type)
@@ -250,6 +251,7 @@ export class Component extends ComponentResource {
             // ie. "-1234567" is automatically added
             "aws:lb/loadBalancer:LoadBalancer": ["name", 24],
             "aws:lambda/function:Function": ["name", 64],
+            "aws:opensearch/domain:Domain": ["domainName", 28, { lower: true }],
             "aws:rds/cluster:Cluster": [
               "clusterIdentifier",
               63,
@@ -280,6 +282,7 @@ export class Component extends ComponentResource {
               64,
               { lower: true },
             ],
+            "aws:sfn/stateMachine:StateMachine": ["name", 80],
             "aws:sns/topic:Topic": [
               "name",
               256,
@@ -306,12 +309,12 @@ export class Component extends ComponentResource {
               { lower: true },
             ],
             "cloudflare:index/r2Bucket:R2Bucket": ["name", 64, { lower: true }],
-            "cloudflare:index/workerScript:WorkerScript": [
-              "name",
+            "cloudflare:index/workersScript:WorkersScript": [
+              "scriptName",
               64,
               { lower: true },
             ],
-            "cloudflare:index/queue:Queue": ["name", 64, { lower: true }],
+            "cloudflare:index/queue:Queue": ["queueName", 64, { lower: true }],
             "cloudflare:index/workersKvNamespace:WorkersKvNamespace": [
               "title",
               64,

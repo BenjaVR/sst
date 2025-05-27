@@ -286,9 +286,9 @@ export interface BucketArgs {
       principals: Input<
         | "*"
         | Input<{
-          type: Input<"aws" | "service" | "federated" | "canonical">;
-          identifiers: Input<Input<string>[]>;
-        }>[]
+            type: Input<"aws" | "service" | "federated" | "canonical">;
+            identifiers: Input<Input<string>[]>;
+          }>[]
       >;
       /**
        * Configure specific conditions for when the policy is in effect.
@@ -321,6 +321,34 @@ export interface BucketArgs {
           values: Input<Input<string>[]>;
         }>[]
       >;
+      /**
+       * The S3 file paths that the policy is applied to. The paths are specified using
+       * the [S3 path format](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html).
+       * The bucket arn will be prepended to the paths when constructing the policy.
+       * @default `["", "*"]`
+       * @example
+       * Apply the policy to the bucket itself.
+       * ```js
+       * {
+       *   paths: [""]
+       * }
+       * ```
+       *
+       * Apply to all files in the bucket.
+       * ```js
+       * {
+       *   paths: ["*"]
+       * }
+       * ```
+       *
+       * Apply to all files in the `images/` folder.
+       * ```js
+       * {
+       *   paths: ["images/*"]
+       * }
+       * ```
+       */
+      paths?: Input<Input<string>[]>;
     }>[]
   >;
   /**
@@ -760,7 +788,7 @@ export class Bucket extends Component implements Link.Linkable {
     // (ie. bucket.name). Also, a bucket can only have one policy. We want to ensure
     // the policy created here is created first. And SST will throw an error if
     // another policy is created after this one.
-    this.bucket = policy.apply(() => bucket);
+    this.bucket = policy.urn.apply(() => bucket);
 
     function normalizeAccess() {
       return all([args.public, args.access]).apply(([pub, access]) =>
@@ -778,14 +806,17 @@ export class Bucket extends Component implements Link.Linkable {
             p.principals === "*"
               ? [{ type: "*", identifiers: ["*"] }]
               : p.principals.map((i) => ({
-                ...i,
-                type: {
-                  aws: "AWS",
-                  service: "Service",
-                  federated: "Federated",
-                  canonical: "Canonical",
-                }[i.type],
-              })),
+                  ...i,
+                  type: {
+                    aws: "AWS",
+                    service: "Service",
+                    federated: "Federated",
+                    canonical: "Canonical",
+                  }[i.type],
+                })),
+          paths: p.paths
+            ? p.paths.map((path) => path.replace(/^\//, ""))
+            : ["", "*"],
         })),
       );
     }
@@ -852,9 +883,9 @@ export class Bucket extends Component implements Link.Linkable {
                 access === "public"
                   ? { type: "*", identifiers: ["*"] }
                   : {
-                    type: "Service",
-                    identifiers: ["cloudfront.amazonaws.com"],
-                  },
+                      type: "Service",
+                      identifiers: ["cloudfront.amazonaws.com"],
+                    },
               ],
               actions: ["s3:GetObject"],
               resources: [interpolate`${bucket.arn}/*`],
@@ -876,9 +907,14 @@ export class Bucket extends Component implements Link.Linkable {
             });
           }
           statements.push(
-            ...policyArgs.map((p) => ({
-              ...p,
-              resources: [bucket.arn, interpolate`${bucket.arn}/*`],
+            ...policyArgs.map((policy) => ({
+              effect: policy.effect,
+              principals: policy.principals,
+              actions: policy.actions,
+              conditions: policy.conditions,
+              resources: policy.paths.map((path) =>
+                path === "" ? bucket.arn : interpolate`${bucket.arn}/${path}`,
+              ),
             })),
           );
 

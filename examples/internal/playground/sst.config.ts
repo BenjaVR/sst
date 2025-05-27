@@ -36,6 +36,7 @@ export default $config({
     //const topic = addTopic();
     //const bus = addBus();
     //const dynamo = addDynamo();
+    //addOpenSearch();
 
     return ret;
 
@@ -167,11 +168,24 @@ export default $config({
 
     function addApiV1() {
       const api = new sst.aws.ApiGatewayV1("MyApiV1");
-      api.route("GET /", {
-        handler: "functions/apiv2/index.handler",
-        link: [bucket],
-      });
+      api.route(
+        "GET /",
+        {
+          handler: "functions/apiv2/index.handler",
+          link: [bucket],
+        },
+        {
+          apiKey: true,
+        }
+      );
       api.deploy();
+      const plan = api.addUsagePlan("MyUsagePlan", {
+        quota: { limit: 1000, period: "day" },
+      });
+      plan.addApiKey("MyApiKey", {
+        value: "1234567890123456789012345678901234567890",
+      });
+
       return api;
     }
 
@@ -285,7 +299,7 @@ export default $config({
         url: {
           router: {
             instance: router,
-            domain: "api.router.playground.sst.sh/",
+            domain: "api.router.playground.sst.sh",
           },
         },
       });
@@ -578,6 +592,19 @@ export default $config({
           CreatedAtIndex2: { hashKey: "userId", rangeKey: "createdAt" },
         },
       });
+    }
+
+    function addOpenSearch() {
+      const os = new sst.aws.OpenSearch("MyOpenSearch");
+      new sst.aws.Function("MyOpenSearchApp", {
+        handler: "functions/open-search/index.handler",
+        url: true,
+        link: [os],
+      });
+      ret.osUrl = os.url;
+      ret.osUsername = os.username;
+      ret.osPassword = os.password;
+      return os;
     }
   },
 });
